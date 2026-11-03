@@ -1,0 +1,4 @@
+[install]
+# Bun: mínimo de 7 dias de idade para instalar uma versão publicada (valor em SEGUNDOS).
+# 7 * 24 * 60 * 60 = 604800
+minimumReleaseAge = 604800

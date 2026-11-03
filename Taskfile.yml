@@ -1,0 +1,160 @@
+version: '3'
+
+vars:
+  APP_NAME: "ffxinstaller"
+  BIN_DIR: "bin"
+  PACKAGE_MANAGER: '{{.PACKAGE_MANAGER | default "npm"}}'
+  VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
+  GOOS: '{{.GOOS | default OS}}'
+  VERSION:
+    sh: 'node -e "process.stdout.write(require(''fs'').readFileSync(''VERSION'',''utf8'').trim())"'
+  BIN: '{{.BIN_DIR}}/{{.APP_NAME}}{{exeExt}}'
+  SERVER_BIN: '{{.BIN_DIR}}/{{.APP_NAME}}-server{{exeExt}}'
+
+tasks:
+  go:mod:tidy:
+    summary: Runs `go mod tidy`
+    internal: true
+    run: once
+    cmds:
+      - go mod tidy
+
+  build:
+    summary: Builds the application
+    cmds:
+      - task: windows:build
+
+  build:dev:
+    summary: Build de dev (usado pelo wails3 dev)
+    internal: true
+    cmds:
+      - task: windows:build
+        vars:
+          DEV: '{{.DEV | default "true"}}'
+
+  dev:
+    summary: Runs the application in development mode
+    cmds:
+      - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}
+
+  # Common tasks expected by wails3 dev
+  common:dev:frontend:
+    summary: Runs the frontend dev server (Vite)
+    dir: frontend
+    cmds:
+      - npm run dev
+
+  common:dev:backend:
+    summary: Runs the backend dev server
+    cmds:
+      - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}
+
+  # run task expected by wails3 dev after frontend starts
+  run:
+    summary: Runs the Wails application in dev mode
+    cmds:
+      - task: windows:build
+        vars:
+          DEV: "true"
+      - '"./{{.BIN_DIR}}/{{.APP_NAME}}.exe"'
+
+  build:server:
+    summary: Builds the application in server mode (no GUI, HTTP server only)
+    desc: |
+      Builds a development server binary with -tags server.
+      Server mode runs as a pure HTTP server without native GUI dependencies.
+    deps:
+      - task: build:frontend
+        vars:
+          DEV: "true"
+    cmds:
+      - go build -tags server -buildvcs=false -gcflags=all="-l" -o "{{.SERVER_BIN}}"
+
+  run:server:
+    summary: Builds and runs a development server
+    deps:
+      - task: build:server
+    cmds:
+      - '"./{{.SERVER_BIN}}"'
+
+  build:frontend:
+    summary: Build the frontend project
+    dir: frontend
+    # Sempre recompila: o cache de checksum do go-task não estava detectando
+    # mudanças nos .vue/.ts e o build saía com o dist antigo.
+    run: always
+    deps:
+      - task: install:frontend:deps
+      - task: generate:bindings
+    cmds:
+      - npm run build:dev -q
+
+  generate:bindings:
+    summary: Generates bindings for the frontend
+    run: once
+    deps:
+      - task: go:mod:tidy
+    sources:
+      - "**/*.go"
+      - go.mod
+      - go.sum
+    generates:
+      - frontend/bindings/**/*
+    cmds:
+      - wails3 generate bindings -clean=true -ts
+
+  install:frontend:deps:
+    summary: Install frontend dependencies
+    dir: frontend
+    sources:
+      - package.json
+      - package-lock.json
+    generates:
+      - node_modules
+    cmds:
+      - npm install
+
+  install:e2e:
+    summary: Instala o Playwright (deps do e2e/ e o navegador Chromium)
+    dir: e2e
+    cmds:
+      - npm install
+      - npx playwright install chromium
+
+  # Ícones do app: gera build/windows/icon.ico e build/darwin/icons.icns
+  # a partir de build/appicon.png (mesmo comando do template Wails).
+  generate:icons:
+    summary: Gera os ícones (.ico/.icns) a partir de build/appicon.png
+    dir: build
+    run: once
+    sources:
+      - "appicon.png"
+    generates:
+      - "windows/icon.ico"
+      - "darwin/icons.icns"
+    cmds:
+      - wails3 generate icons -input appicon.png -macfilename darwin/icons.icns -windowsfilename windows/icon.ico
+
+  # Resource do Windows: é o .syso que embute o ícone/manifesto/metadados no
+  # EXE. Sem ele o binário fica sem ícone, mesmo com o icon.ico atualizado.
+  generate:syso:
+    summary: Gera o .syso do Windows (ícone + manifesto + info)
+    dir: build
+    cmds:
+      - wails3 generate syso -arch {{.ARCH | default "amd64"}} -icon windows/icon.ico -manifest windows/wails.exe.manifest -info windows/info.json -out ../wails_windows_{{.ARCH | default "amd64"}}.syso
+
+  windows:build:
+    summary: Build Windows binary
+    deps:
+      - task: build:frontend
+        vars:
+          DEV:
+            ref: .DEV
+      - task: generate:icons
+    cmds:
+      - task: generate:syso
+      - go build -buildvcs=false -gcflags=all="-l" -o "{{.BIN}}"
+      - cmd: powershell -NoProfile -Command "Remove-Item *.syso -Force -ErrorAction SilentlyContinue"
+        platforms: [windows]
+      - cmd: rm -f *.syso
+        platforms: [linux, darwin]

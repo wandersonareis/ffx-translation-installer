@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=My Product
+Comment=A ffxinstaller application
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/ffxinstaller.exe %u
+Terminal=false
+Type=Application
+Icon=ffxinstaller.exe
+Categories=Utility;
+StartupWMClass=ffxinstaller.exe
+
+ 

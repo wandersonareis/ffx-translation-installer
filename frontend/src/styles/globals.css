@@ -1,0 +1,64 @@
+/* ══════════════════════════════════════════════════════════════════════
+   GLOBALS — folha de estilo raiz do instalador.
+
+   Tailwind v4 roda pelo PostCSS (@tailwindcss/postcss, ver
+   postcss.config.mjs) com detecção automática de conteúdo: todas as
+   classes utilitárias usadas nos componentes Vue viram CSS de verdade
+   (overlay fixo, z-index, backdrop, grid das labels, etc.).
+
+   Tema: as cores de superfície/texto moram em variáveis CSS e são
+   trocadas pelo atributo data-theme no <html> (dark é o padrão de boot;
+   o tema do sistema é aplicado pelo script do index.html e o config.json
+   manda quando tem uma escolha salva).
+   ══════════════════════════════════════════════════════════════════════ */
+
+@import "tailwindcss";
+
+:root,
+:root[data-theme="dark"] {
+  --app-bg: #15161a; /* main canvas */
+  --app-surface: #1e1f24; /* barras (header/rodapé) */
+  --app-surface-2: #181920; /* cartões/modais */
+  --app-border: #3f3f46;
+  --app-fg: #ffffff;
+  --app-fg-muted: #a1a1aa;
+  --app-input-bg: #111218;
+  --app-input-border: #3f3f46;
+  --app-hover: #27272a;
+  --app-danger: #f87171;
+  --app-success: #34d399;
+  --app-warning: #facc15;
+}
+
+:root[data-theme="light"] {
+  --app-bg: #f1f5f9; /* slate-100 */
+  --app-surface: #ffffff;
+  --app-surface-2: #ffffff;
+  --app-border: #cbd5e1; /* slate-300 */
+  --app-fg: #0f172a; /* slate-900 */
+  --app-fg-muted: #64748b; /* slate-500 */
+  --app-input-bg: #ffffff;
+  --app-input-border: #cbd5e1;
+  --app-hover: #e2e8f0; /* slate-200 */
+  --app-danger: #dc2626;
+  --app-success: #16a34a;
+  --app-warning: #b45309;
+}
+
+@layer base {
+  html,
+  body,
+  #app {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--app-bg);
+    color: var(--app-fg);
+    font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+}

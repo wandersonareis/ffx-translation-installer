@@ -1,0 +1,4 @@
+# pnpm 11+: mínimo de 7 dias de idade (valor em MINUTOS; 1440 = 1 dia).
+# strict:true = falha se nenhuma versão elegível existir no range (não cai para uma versão nova demais).
+minimumReleaseAge: 10080
+minimumReleaseAgeStrict: true
